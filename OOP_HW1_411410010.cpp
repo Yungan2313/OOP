@@ -22,13 +22,13 @@ public:
     void initialize(int id){ID = id;logq_ID = id;};
     void amend_path(){shortypath.push_back({-1});};
     void adj_add(int node){adjacent.push_back(node);adj_count++;};
-    int adj_check(int position){return adjacent[position];};
-    void BFS(phyqubits (&now)[],int destination,int node);
+    vector<int> BFS(phyqubits (&now)[],int destination,int node);
     int lock_BFS(int node,phyqubits phyq[]);
     void path(int destination);
     int lock_get(){return lock;};
     int logq_get(){return logq_ID;};
     void swap(int id,phyqubits (&phyq)[]);
+    int adj_check(int node);
     // int frequency_check(){return frequency;};
 };
 class logqubits{//移動的點
@@ -45,6 +45,7 @@ public:
     void set_position(int pos){position = pos;};
     int position_check(){return position;};
     void swap(int id,logqubits (&logq)[]);
+    int ID_get(){return ID;};
 };
 class Topological{//拓譜圖
 private:
@@ -99,6 +100,7 @@ int main(){
     while(logq_table_count){
         int start,dest,new_pos,logq_change,logq_base;
         if(logq_used_table[Topo_sequence[count].first] == -1 || logq_used_table[Topo_sequence[count].second] == -1){
+            // cout << logq_table_count << ":" <<Topo_sequence[count].first << " " << Topo_sequence[count].second << endl;
             logq_used_table[Topo_sequence[count].first] = 0;
             logq_used_table[Topo_sequence[count].second] = 0;
             if(phyq[logq[Topo_sequence[count].second].position_check()].lock_get() == 0){//確定基底是誰
@@ -125,9 +127,79 @@ int main(){
         }
         
         count++;
+        if(count == gates){//有logq 沒用到的情況
+            break;
+        }
     }
     count = 0;
+    for(int i = 0;i<node;i++){
+        cout << logq[i].ID_get()+1 << " " << logq[i].position_check()+1 << endl;
+    }
+    //----------------------------------------------------------do cnot gate
+    for(int i = 0;i<gates;i++){
+        int x,y;//logq
+        int adj,path;
+        int x_pos,y_pos;
+        x = Topo_sequence[i].first;
+        y = Topo_sequence[i].second;
+        x_pos = logq[Topo_sequence[i].first].position_check();
+        y_pos = logq[Topo_sequence[i].second].position_check();
+        adj = phyq[x_pos].adj_check(y_pos);
+        if(adj != -1){ //相鄰
+            cout << "CNOT q" << x+1 << " q" << y+1 << endl; 
+        }
+        else{
+            vector<int> trace = phyq[x_pos].BFS(phyq, y_pos, node);//從x到y
+            #ifdef DEBUG
+            for(int i = 0;i<trace.size();i++){
+                cout << trace[i]+1 << " ";
+            }
+            cout << endl;
+            #endif
+            for(int i = 0;i<trace.size();i++){//x是位置(基底) trace[i]是要換的路線
+                // cout << trace[i]+1 << " ";
+                cout << "SWAP q" << x+1 << " q" << phyq[trace[i]].logq_get()+1 << endl;
+                path = phyq[trace[i]].logq_get();
+                phyq[x_pos].swap(trace[i],phyq);
+                logq[x].swap(path,logq);
+                x_pos = logq[x].position_check();
+                count++;
+                #ifdef DEBUG
+                cout << "debug ";
+                for(int i = 0;i<node;i++){
+                    cout << phyq[i].logq_get()+1;
+                }
+                cout << endl;
+                #endif
+            }
+            // cout << endl;
+            cout << "CNOT q" << x+1 << " q" << y+1 << endl; 
+            // cout << "CNOT q" << phyq[x].logq_get()+1 << " q" << phyq[y].logq_get()+1 << endl; 
+        }
+        // adj = phyq[x].adj_check(y);
+        // if(adj != -1){ //相鄰
+        //     cout << "CNOT q" << phyq[x].logq_get()+1 << " q" << phyq[y].logq_get()+1 << endl; 
+        // }
+        // else{
+        //     vector<int> trace = phyq[x].BFS(phyq, y, node);//從x到y
+        //     for(int i = 0;i<trace.size();i++){//x是位置(基底) trace[i]是要換的路線
+        //         // cout << trace[i]+1 << " ";
+        //         cout << "SWAP q" << phyq[x].logq_get()+1 << " q" << phyq[trace[i]].logq_get()+1 << endl;
+        //         logqpath = phyq[trace[i]].logq_get();
+        //         phyq[x].swap(trace[i],phyq);
+        //         logq[phyq[x].logq_get()].swap(logqpath,logq);
+        //     }
+        //     // cout << endl;
+        //     cout << "CNOT q" << phyq[x].logq_get()+1 << " q" << phyq[y].logq_get()+1 << endl; 
+        // }
+    }
+    #ifdef DEBUG
+        for(int i = 0;i<node;i++){
+            cout << phyq[i].logq_get()+1 << endl;
+        }
+    #endif
     #ifdef TIME
+    cout << "swap:" << count << endl;
     auto end_time = high_resolution_clock::now();
     duration<double> elapsed_seconds = duration_cast<duration<double>>(end_time - start_time);
     cout << "Execution time: " << elapsed_seconds.count() << " seconds" << endl;
@@ -179,7 +251,7 @@ void Topological::initialize(int id,logqubits (&logq)[]){
     logq[ID[1]].used_time_add();
     
 }
-void phyqubits::BFS(phyqubits (&phyq)[],int destination,int node){
+vector<int> phyqubits::BFS(phyqubits (&phyq)[],int destination,int node){
     queue<int> queue;
     vector<int> trace,back_trace;
     stack<int> stemp;
@@ -218,8 +290,6 @@ void phyqubits::BFS(phyqubits (&phyq)[],int destination,int node){
     now = destination;
     // phyq[now].frequency++;//尾巴
     // frequency++;//頭
-    stemp.push(now);
-    queue.push(now);
     for(int i = table[destination]-1;i>0;i--){
         int j = 0;
         while(1){
@@ -240,6 +310,7 @@ void phyqubits::BFS(phyqubits (&phyq)[],int destination,int node){
         stemp.pop();
         queue.pop();
     }
+    return trace;
     // if(ID == shortypath.size()){
     //     shortypath.push_back({-1});
     //     shortypath.push_back(trace);
@@ -338,4 +409,13 @@ void logqubits::swap(int id,logqubits (&logq)[]){
     int temp = position;
     position = logq[id].position;
     logq[id].position = temp;
+}
+int phyqubits::adj_check(int node){
+    for(int i = 0;i<adjacent.size();i++){
+        // cout << node+1 << " " << adjacent[i]+1 << endl; 
+        if(node == adjacent[i]){
+            return adjacent[i];
+        }
+    }
+    return -1;
 }
