@@ -29,6 +29,7 @@ public:
     int logq_get(){return logq_ID;};
     void swap(int id,phyqubits (&phyq)[]);
     int adj_check(int node);
+    int distance(int x,phyqubits (&phyq)[],int node);
     // int frequency_check(){return frequency;};
 };
 class logqubits{//移動的點
@@ -36,9 +37,9 @@ private:
     int ID;
     int position;
     int used_time;
-    vector<int> gate_case;
 public:
     logqubits();
+    queue<int> gate_case;
     void initialize(int id){ID = id;position = id;};
     void used_time_add(){used_time++;};
     int used_time_check(){return used_time;};
@@ -60,11 +61,13 @@ public:
     void sequence(vector<pair<int,int>> &topo,Topological (&topmap)[],int gates);
     void show(){cout << wait_count << ":" << ID[0] << " " << ID[1] << endl;};
     void link_show(){for(int i = 0;i < link.size();i++){cout << link[i] << " ";}};
+    void logq_gate_get(logqubits (&logq)[],vector<pair<int,int>> sequence);
 };
 
 
 
 void initialize(int node,int gates,int precedence,int link,phyqubits (&phyq)[],logqubits (&logq)[],Topological (&topmap)[],int (&logq_used_table)[]);
+void swap(int x,int y);
 
 int main(){
     int node,gates,precedence,link;
@@ -91,6 +94,7 @@ int main(){
     }
     #endif
     topmap[0].sequence(Topo_sequence,topmap,gates);
+    topmap[0].logq_gate_get(logq,Topo_sequence);
     #ifdef DEBUG
     for(int i = 0;i<gates;i++){
         cout << Topo_sequence[i].first << " " << Topo_sequence[i].second << endl;
@@ -146,10 +150,27 @@ int main(){
         y_pos = logq[Topo_sequence[i].second].position_check();
         adj = phyq[x_pos].adj_check(y_pos);
         if(adj != -1){ //相鄰
-            cout << "CNOT q" << x+1 << " q" << y+1 << endl; 
+            // cout << "CNOT q" << x+1 << " q" << y+1 << endl; 
+            logq[x].gate_case.pop();
+            logq[y].gate_case.pop();
         }
         else{
             vector<int> trace = phyq[x_pos].BFS(phyq, y_pos, node);//從x到y
+            int x_d = phyq[x_pos].distance(logq[logq[x].gate_case.front()].position_check(),phyq,node) + phyq[x_pos].distance(logq[logq[y].gate_case.front()].position_check(),phyq,node);
+            int y_d = phyq[y_pos].distance(logq[logq[x].gate_case.front()].position_check(),phyq,node) + phyq[y_pos].distance(logq[logq[y].gate_case.front()].position_check(),phyq,node);
+            cout << x_d << " " << y_d << endl;
+            if(y_d < x_d){
+                cout << "ok" << endl;
+                swap(x,y);
+                swap(x_pos,y_pos);
+                vector<int> reverse;
+                for(int i = 0;i<trace.size();i++){
+                    reverse[trace.size()-1-i] = trace[i];
+                }
+                for(int i = 0;i<trace.size();i++){
+                    trace[i] = reverse[i];
+                }
+            }
             #ifdef DEBUG
             for(int i = 0;i<trace.size();i++){
                 cout << trace[i]+1 << " ";
@@ -158,7 +179,7 @@ int main(){
             #endif
             for(int i = 0;i<trace.size();i++){//x是位置(基底) trace[i]是要換的路線
                 // cout << trace[i]+1 << " ";
-                cout << "SWAP q" << x+1 << " q" << phyq[trace[i]].logq_get()+1 << endl;
+                // cout << "SWAP q" << x+1 << " q" << phyq[trace[i]].logq_get()+1 << endl;
                 path = phyq[trace[i]].logq_get();
                 phyq[x_pos].swap(trace[i],phyq);
                 logq[x].swap(path,logq);
@@ -173,7 +194,9 @@ int main(){
                 #endif
             }
             // cout << endl;
-            cout << "CNOT q" << x+1 << " q" << y+1 << endl; 
+            // cout << "CNOT q" << x+1 << " q" << y+1 << endl;  
+            logq[x].gate_case.pop();
+            logq[y].gate_case.pop();
             // cout << "CNOT q" << phyq[x].logq_get()+1 << " q" << phyq[y].logq_get()+1 << endl; 
         }
         // adj = phyq[x].adj_check(y);
@@ -418,4 +441,21 @@ int phyqubits::adj_check(int node){
         }
     }
     return -1;
+}
+int phyqubits::distance(int x,phyqubits (&phyq)[],int node){
+    vector<int> distance = BFS(phyq,x,node);
+    return distance.size();
+}
+void Topological::logq_gate_get(logqubits (&logq)[],vector<pair<int,int>> sequence){
+    for(int i = 0;i<sequence.size();i++){
+        int x = sequence[i].first;
+        int y = sequence[i].second;
+        logq[x].gate_case.push(y);
+        logq[y].gate_case.push(x);
+    }
+}
+void swap(int x,int y){
+    int temp = x;
+    x = y;
+    y = temp;
 }
