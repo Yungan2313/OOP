@@ -2028,6 +2028,7 @@ void IoT_device::recv_handler (packet *p){
                     ptp->getHeader()->setPreID ( getNodeID() );
                     ptp->getHeader()->setNexID ( BROADCAST_ID );
                     ptp->getHeader()->setDstID ( BROADCAST_ID );
+                    ptpy->increase();
                     send_handler(ptp);
                     //delete parent
                     // IoT_ctrl_packet *ptpd = nullptr;
@@ -2090,13 +2091,13 @@ void IoT_device::recv_handler (packet *p){
                 if(it->second == 0){
                     data_packet_collect(it->first);
                     // cout << "not send yet:" << it->first << endl;
-                    break;
+                    return;
                 }
                 // cout << "check" << endl;
-                if(!send_check){
-                    send_check = true;
-                    send_handler(pd);
-                }
+            }
+            if(!send_check){
+                send_check = true;
+                send_handler(pd);
             }
         }
     }
