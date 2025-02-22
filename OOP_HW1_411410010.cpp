@@ -4,7 +4,7 @@
 #include <stack>
 #include <chrono>//檢查運算時間
 // #define DEBUG
-#define TIME
+// #define TIME
 using namespace std;
 using namespace std::chrono;
 

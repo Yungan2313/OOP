@@ -1,56 +1,64 @@
-#include <stdio.h>
-#include <string.h>
-int operate(long long num1, long long num2, char* operation){
-    if(strcmp(operation, "Addition") == 0){
-        return num1 + num2;
-    }
-    else if(strcmp(operation, "Subtraction") == 0){
-        return num1 - num2;
-    }
-    else if(strcmp(operation, "Multiplication") == 0){
-        return num1 * num2;
-    }
-    else{
-        return 0;
-    }
-}
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+
 int main(){
-    char operation[20], line[50];
-    long long numbers[100];  
-    long long result;
-    int count = 0;
-    scanf("%s", operation);
-    scanf("%s", line);
-    int value = 0, negative = 0;
-    for(int i = 0; i < strlen(line); i++){
-        if(line[i] == '-'){
-            negative = 1;
+    struct position{
+        int x;
+        int y;
+        char direction;
+        char input[101];
+    };
+    enum{
+        North, East, South, West
+    };
+    struct position robot;
+    robot.x = 0;
+    robot.y = 0;
+    robot.direction = 0;
+    while(scanf("%s", robot.input) != EOF){
+        for(int i = 0; i < strlen(robot.input); i++){
+            if(robot.input[i] == 'G'){
+                    switch (robot.direction){
+                        case North:
+                            robot.y ++;
+                            break;
+                        case South:
+                            robot.y --;
+                            break;
+                        case West:
+                            robot.x --;
+                            break;
+                        case East:
+                            robot.x ++;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            else{
+                if(robot.input[i] == 'R'){
+                    robot.direction++;
+                }
+                else if(robot.input[i] == 'L'){
+                    robot.direction--;
+                }
+                if(robot.direction == 4){
+                    robot.direction = 0;
+                }
+                else if(robot.direction == -1){
+                    robot.direction = 3;
+                }
+            }
+        }
+        if(robot.x == 0 && robot.y == 0){
+            printf("TRUE\n");
         }
         else{
-            if(line[i] <= '9' && line[i] >= '0'){
-                value *= 10;
-                value += line[i] - '0';
-            }
-            else{
-                if(negative){
-                    value *= -1;
-                }
-                numbers[count++] = value;
-                value = 0;
-                negative = 0;
-            }
+            printf("FALSE\n");
         }
+        robot.x = 0;
+        robot.y = 0;
     }
-    if(negative){
-        value *= -1;
-    }
-    numbers[count++] = value; //the value at the end of the sequence
-    result = numbers[0];
-    for(int i = 1; i < count; i++){
-        //printf("%d ",numbers[i]);
-        result = operate(result, numbers[i], operation); 
-    }
-    printf("%lld\n", result);
-
-    return 0; 
+return 0;
 }
